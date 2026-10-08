@@ -1,6 +1,5 @@
 package com.example.controller;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -16,8 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.entities.Tutorial;
-import com.example.exception.ResourceNotFoundException;
-import com.example.repository.TutorialRepository;
+import com.example.services.TutorialService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,17 +24,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TutorialController {
 
-    private final TutorialRepository tutorialRepository;
+    private final TutorialService tutorialService;
 
     @GetMapping("/tutorials")
     public ResponseEntity<List<Tutorial>> getAllTutorials(@RequestParam(required = false) String title) {
 
-        List<Tutorial> tutorials = new ArrayList<Tutorial>();
-
-        if (title == null)
-            tutorialRepository.findAll().forEach(tutorials::add);
-        else
-            tutorialRepository.findByTitleContaining(title).forEach(tutorials::add);
+        List<Tutorial> tutorials = tutorialService.findAll(title);
 
         if (tutorials.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -47,21 +40,14 @@ public class TutorialController {
 
     @GetMapping("/tutorials/{id}")
     public ResponseEntity<Tutorial> getTutorialById(@PathVariable("id") long id) {
-        Tutorial tutorial = tutorialRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Not found Tutorial with id = "
-                        + id));
+        Tutorial tutorial = tutorialService.findById(id);
 
         return new ResponseEntity<>(tutorial, HttpStatus.OK);
     }
 
     @PostMapping("/tutorials")
     public ResponseEntity<Tutorial> createTutorial(@RequestBody Tutorial tutorial) {
-        Tutorial _tutorial = tutorialRepository.save(
-                Tutorial.builder()
-                        .title(tutorial.getTitle())
-                        .description(tutorial.getDescription())
-                        .published(true)
-                        .build());
+        Tutorial _tutorial = tutorialService.create(tutorial);
 
         return new ResponseEntity<>(_tutorial, HttpStatus.CREATED);
     }
@@ -69,41 +55,33 @@ public class TutorialController {
     @PutMapping("/tutorials/{id}")
     public ResponseEntity<Tutorial> updateTutorial(@PathVariable("id") long id,
             @RequestBody Tutorial tutorial) {
-        Tutorial _tutorial = tutorialRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Not found Tutorial with id = "
-                        + id));
+        Tutorial _tutorial = tutorialService.update(id, tutorial);
 
-        _tutorial.setTitle(tutorial.getTitle());
-        _tutorial.setDescription(tutorial.getDescription());
-        _tutorial.setPublished(tutorial.isPublished());
-
-        return new ResponseEntity<>(tutorialRepository.save(_tutorial), HttpStatus.OK);
+        return new ResponseEntity<>(_tutorial, HttpStatus.OK);
     }
 
     @DeleteMapping("/tutorials/{id}")
     public ResponseEntity<HttpStatus> deleteTutorial(@PathVariable("id") long id) {
-        tutorialRepository.deleteById(id);
+        tutorialService.delete(id);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @DeleteMapping("/tutorials")
     public ResponseEntity<HttpStatus> deleteAllTutorials() {
-        tutorialRepository.deleteAll();
+        tutorialService.deleteAll();
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/tutorials/published")
     public ResponseEntity<List<Tutorial>> findByPublished() {
-        List<Tutorial> tutorials = tutorialRepository.findByPublished(true);
+        List<Tutorial> tutorials = tutorialService.findByPublished(true);
 
         if (tutorials.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
         return new ResponseEntity<>(tutorials, HttpStatus.OK);
-
     }
-
 }
